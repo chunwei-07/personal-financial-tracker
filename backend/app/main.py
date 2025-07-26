@@ -63,3 +63,13 @@ def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get
     """
     transactions = crud.get_transactions(db, skip=skip, limit=limit)
     return transactions
+
+
+@app.get("/transactions/summary/monthly-expenses")
+def read_monthly_expense_summary(db: Session = Depends(get_db)):
+    """
+    API endpoint to get a summary of expenses per category for the current month.
+    """
+    summary = crud.get_monthly_expense_summary(db=db)
+    # Convert to dict for easy use in frontend
+    return {item.category: item.total_amount for item in summary}

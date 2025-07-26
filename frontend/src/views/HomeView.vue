@@ -1,11 +1,24 @@
 <!-- The parent component managing state and components -->
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import TransactionList from '@/components/TransactionList.vue'
+import ExpenseChart from '@/components/ExpenseChart.vue'
 
 // The main reactive array that will hold the transaction data
 const transactions = ref([])
+const expenseSummary = ref([])
+
+// Function to fetch summary data from new endpoint
+const fetchExpenseSummary = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/transactions/summary/monthly-expenses')
+    if (!response.ok) throw new Error('Failed to fetch summary')
+    expenseSummary.value = await response.json()
+  } catch (error) {
+    console.error('Error fetching summary:', error)
+  }
+}
 
 // Function to fetch data from BE
 const fetchTransactions = async () => {
@@ -21,17 +34,40 @@ const fetchTransactions = async () => {
   }
 }
 
+// Function that runs whenever a transaction is added
+const handleTransactionAdded = () => {
+  fetchTransactions()
+  fetchExpenseSummary()
+}
+
 // onMounted is a lifecycle hook that runs once when the component is created.
 // Call fecth here to load initial data
 onMounted(() => {
   fetchTransactions()
+  fetchExpenseSummary()
+})
+
+const chartData = computed(() => {
+  const labels = Object.keys(expenseSummary.value)
+  const data = Object.values(expenseSummary.value)
+
+  return {
+    labels: labels,
+    datasets: [
+      {
+        backgroundColor: ['#41B883', '#E46651', '#00D8FF', '#DD1B16', '#F4D03F', '#5D6D7E'],
+        data: data
+      }
+    ]
+  }
 })
 </script>
 
 <template>
   <main>
     <div class="container">
-      <TransactionForm @transaction-added="fetchTransactions" />
+      <ExpenseChart v-if="Object.keys(expenseSummary).length > 0" :chart-data="chartData" />
+      <TransactionForm @transaction-added="handleTransactionAdded" />
       <TransactionList :transactions="transactions" />
     </div>
   </main>

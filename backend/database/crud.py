@@ -1,6 +1,8 @@
-from sqlalchemy.orm import Session
 from . import models
 from app import schemas
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+from datetime import datetime, date 
 
 def get_transactions(db: Session, skip: int = 0, limit: int = 100):
     """
@@ -24,3 +26,23 @@ def create_transaction(db: Session, transaction: schemas.TransactionCreate):
     # Refresh instance to get new data from DB
     db.refresh(db_transaction)
     return db_transaction
+
+def get_monthly_expense_summary(db: Session):
+    """
+    Calculates total expenses per category for the current month.
+    """
+    today = date.today()
+    start_of_month = today.replace(day=1)
+
+    # Query the database, grouping by category and summing the amount
+    summary = db.query(
+        models.Transaction.category,
+        func.sum(models.Transaction.amount).label('total_amount')
+    ).filter(
+        models.Transaction.type == 'Expense',
+        func.date(models.Transaction.date) >= start_of_month
+    ).group_by(
+        models.Transaction.category
+    ).all()
+
+    return summary
