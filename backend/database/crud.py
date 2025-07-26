@@ -3,6 +3,7 @@ from app import schemas
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import datetime, date 
+from typing import Optional
 
 def get_transactions(db: Session, skip: int = 0, limit: int = 100):
     """
@@ -46,3 +47,42 @@ def get_monthly_expense_summary(db: Session):
     ).all()
 
     return summary
+
+def get_categories(db: Session, type: Optional[str] = None):
+    query = db.query(models.Category)
+    if type:
+        query = query.filter(models.Category.type == type)
+    return query.order_by(models.Category.name).all()
+
+def create_category(db: Session, category: schemas.CategoryCreate):
+    """
+    Creates a new category in the database.
+    Checks for duplicates based on both name and type.
+    """
+    # Check if a category with the same name AND type already exists
+    db_category = db.query(models.Category).filter(
+        models.Category.name == category.name,
+        models.Category.type == category.type
+    ).first()
+
+    if db_category:
+        return db_category
+    
+    db_category = models.Category(**category.model_dump())
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+def get_accounts(db: Session):
+    return db.query(models.Account).order_by(models.Account.name).all()
+
+def create_account(db: Session, account: schemas.AccountCreate):
+    db_account = db.query(models.Account).filter(models.Account.name == account.name).first()
+    if db_account:
+        return db_account
+    db_account = models.Account(**account.model_dump())
+    db.add(db_account)
+    db.commit()
+    db.refresh(db_account)
+    return db_account

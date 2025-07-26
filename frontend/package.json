@@ -11,21 +11,18 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "chart.js": "^4.5.0",
-    "pinia": "^3.0.3",
-    "vue": "^3.5.17",
-    "vue-chartjs": "^5.3.2",
-    "vue-router": "^4.5.1"
+    "chart.js": "^4.4.2",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.27",
+    "vue-chartjs": "^5.3.1",
+    "vue-router": "^4.3.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.29.0",
-    "@vitejs/plugin-vue": "^6.0.0",
-    "@vue/eslint-config-prettier": "^10.2.0",
-    "eslint": "^9.29.0",
-    "eslint-plugin-vue": "~10.2.0",
-    "globals": "^16.2.0",
-    "prettier": "3.5.3",
-    "vite": "^7.0.0",
-    "vite-plugin-vue-devtools": "^7.7.7"
+    "@vitejs/plugin-vue": "^5.0.4",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.26.0",
+    "prettier": "^3.2.5",
+    "vite": "^5.2.8",
+    "vite-plugin-vue-devtools": "^7.2.1"
   }
 }

@@ -25,3 +25,26 @@ class Transaction(TransactionBase):
     # but an ORM model (SQLAlchemy model)
     class Config:
         from_attributes = True
+
+class CategoryBase(BaseModel):
+    name: str
+    type: str
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class Category(CategoryBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class AccountBase(BaseModel):
+    name: str
+
+class AccountCreate(AccountBase):
+    pass
+
+class Account(AccountBase):
+    id: int
+    class Config:
+        from_attributes = True

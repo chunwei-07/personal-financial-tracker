@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from database import models, crud
 from database.session import SessionLocal, engine
@@ -73,3 +73,21 @@ def read_monthly_expense_summary(db: Session = Depends(get_db)):
     summary = crud.get_monthly_expense_summary(db=db)
     # Convert to dict for easy use in frontend
     return {item.category: item.total_amount for item in summary}
+
+@app.get("/categories/", response_model=List[schemas.Category])
+def read_categories(type: Optional[str] = None, db: Session = Depends(get_db)):
+    categories = crud.get_categories(db=db, type=type)
+    return categories
+
+@app.post("/categories/", response_model=schemas.Category)
+def create_new_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    return crud.create_category(db=db, category=category)
+
+@app.get("/accounts/", response_model=List[schemas.Account])
+def read_accounts(db: Session = Depends(get_db)):
+    accounts = crud.get_accounts(db=db)
+    return accounts
+
+@app.post("/accounts/", response_model=schemas.Account)
+def create_new_account(account: schemas.AccountCreate, db: Session = Depends(get_db)):
+    return crud.create_account(db=db, account=account)

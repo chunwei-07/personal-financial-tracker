@@ -17,3 +17,16 @@ class Transaction(Base):
     # For income, money moves from external to one acc   (from_account = NULL)
     from_account = Column(String)
     to_account = Column(String)
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    type = Column(String, nullable=False)
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id = Column(Integer, primary_key=True,index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
