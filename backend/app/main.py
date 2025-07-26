@@ -1,5 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from typing import List
+
+from database import models, crud
+from database.session import SessionLocal, engine
+from . import schemas
+
+# Tells SQLAlchemy to create all tables defined in models
+models.Base.metadata.create_all(bind=engine)
 
 # Create the FastAPI app instance
 app = FastAPI()
@@ -21,8 +30,36 @@ app.add_middleware(
     allow_headers=["*"],    # Allows all headers
 )
 
+# --- Database Dependencies ---
+def get_db():
+    """
+    FastAPI dependency to get a DB session for each request.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 # --- API Endpoints ---
 @app.get("/")
 def read_root():
     """A simple endpoint to check if the server is running."""
     return {"message": "Welcome to the Financial Tracker API!"}
+
+
+@app.post('/transactions/', response_model=schemas.Transaction)
+def create_new_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
+    """
+    API endpoint to create a new transaction.
+    """
+    return crud.create_transaction(db=db, transaction=transaction)
+
+
+@app.get("/transactions/", response_model=List[schemas.Transaction])
+def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """
+    API endpoint to retrieve all transactions.
+    """
+    transactions = crud.get_transactions(db, skip=skip, limit=limit)
+    return transactions
