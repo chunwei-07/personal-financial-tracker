@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import models
+from database.session import engine
+
+# Tells SQLAlchemy to create all tables defined in models
+models.Base.metadata.create_all(bind=engine)
 
 # Create the FastAPI app instance
 app = FastAPI()
