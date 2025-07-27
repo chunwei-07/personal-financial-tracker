@@ -31,7 +31,7 @@ const currentCategories = computed(() => {
 // --- API FUNCTIONS ---
 const fetchAccounts = async () => {
     try {
-        const response = await fetch('http://localhost:8000/accounts/')
+        const response = await fetch('/accounts/')
         accounts.value = await response.json()
         if (accounts.value.length > 0) {
             form.from_account = accounts.value[0].name
@@ -46,8 +46,8 @@ const fetchAccounts = async () => {
 const fetchCategories = async () => {
     try {
         const [expRes, incRes] = await Promise.all([
-            fetch('http://localhost:8000/categories/?type=Expense'),
-            fetch('http://localhost:8000/categories/?type=Income')
+            fetch('/categories/?type=Expense'),
+            fetch('/categories/?type=Income')
         ])
         expenseCategories.value = await expRes.json()
         incomeCategories.value = await incRes.json()
@@ -69,7 +69,7 @@ const addNewCategory = async () => {
     }
 
     try {
-        await fetch('http://localhost:8000/categories/', {
+        await fetch('/categories/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -92,7 +92,7 @@ const addNewAccount = async () => {
         return
     }
     try {
-        await fetch('http://localhost:8000/accounts/', {
+        await fetch('/accounts/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: newAccountName.trim() })
@@ -127,7 +127,7 @@ const handleSubmit = async () => {
     }
 
     try {
-        await fetch('http://localhost:8000/transactions/', {
+        await fetch('/transactions/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

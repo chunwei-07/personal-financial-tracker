@@ -12,7 +12,7 @@ const expenseSummary = ref([])
 // Function to fetch summary data from new endpoint
 const fetchExpenseSummary = async () => {
   try {
-    const response = await fetch('http://localhost:8000/transactions/summary/monthly-expenses')
+    const response = await fetch('/transactions/summary/monthly-expenses')
     if (!response.ok) throw new Error('Failed to fetch summary')
     expenseSummary.value = await response.json()
   } catch (error) {
@@ -23,7 +23,7 @@ const fetchExpenseSummary = async () => {
 // Function to fetch data from BE
 const fetchTransactions = async () => {
   try {
-    const response = await fetch('http://localhost:8000/transactions/')
+    const response = await fetch('/transactions/')
     if (!response.ok) {
       throw new Error('Failed to fetch transactions.')
     }
@@ -68,7 +68,10 @@ const chartData = computed(() => {
     <div class="container">
       <ExpenseChart v-if="Object.keys(expenseSummary).length > 0" :chart-data="chartData" />
       <TransactionForm @transaction-added="handleTransactionAdded" />
-      <TransactionList :transactions="transactions" />
+      <TransactionList
+        :transactions="transactions" 
+        @transaction-deleted="handleTransactionAdded"
+      />
     </div>
   </main>
 </template>

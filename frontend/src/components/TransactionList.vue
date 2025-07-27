@@ -23,6 +23,28 @@ const formatCurrency = (amount) => {
         currency: 'MYR'
     }).format(amount)
 }
+
+// Delete transaction
+const emit = defineEmits(['transaction-deleted'])
+
+const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) {
+        return
+    }
+    try {
+        const response = await fetch(`/transactions/${id}`, {
+            method: 'DELETE'
+        })
+        if (!response.ok) {
+            throw new Error('Failed to delete transaction.')
+        }
+        emit('transaction-deleted')
+        alert('Transaction deleted successfully!')
+    } catch (error) {
+        console.error(error)
+        alert('Error: ' + error.message)
+    }
+}
 </script>
 
 <template>
@@ -41,6 +63,7 @@ const formatCurrency = (amount) => {
                     <th>Amount</th>
                     <th>From</th>
                     <th>To</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,6 +76,9 @@ const formatCurrency = (amount) => {
                     <td class="amount">{{ formatCurrency(transaction.amount) }}</td>
                     <td>{{ transaction.from_account }}</td>
                     <td>{{ transaction.to_account }}</td>
+                    <td>
+                        <button @click="handleDelete(transaction.id)" class="delete-btn">X</button>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -81,6 +107,17 @@ tr:nth-child(even) {
 }
 .amount {
     font-weight: bold;
+}
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+.delete-btn:hover {
+    background-color: #c0392b;
 }
 .empty-state {
     margin-top: 1rem;

@@ -86,3 +86,10 @@ def create_account(db: Session, account: schemas.AccountCreate):
     db.commit()
     db.refresh(db_account)
     return db_account
+
+def delete_transaction(db: Session, transaction_id: int):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+    if db_transaction:
+        db.delete(db_transaction)
+        db.commit()
+    return db_transaction
