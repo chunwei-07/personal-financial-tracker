@@ -1,5 +1,7 @@
 <!-- This component is to receive transactions list and display it nicely in a table -->
 <script setup>
+import { formatCurrency } from '@/utils/formatters'
+
 // defineProps allows to declare data this component expects from parent
 defineProps({
     transactions: {
@@ -17,12 +19,12 @@ const formatDate = (dateString) => {
 }
 
 // Format currency
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'MYR'
-    }).format(amount)
-}
+// const formatCurrency = (amount) => {
+//     return new Intl.NumberFormat('en-US', {
+//         style: 'currency',
+//         currency: 'MYR'
+//     }).format(amount)
+// }
 
 // Delete transaction
 const emit = defineEmits(['transaction-deleted'])

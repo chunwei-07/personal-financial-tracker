@@ -2,8 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 import os
 
 from database import models, crud
@@ -13,8 +14,36 @@ from . import schemas
 # Tells SQLAlchemy to create all tables defined in models
 models.Base.metadata.create_all(bind=engine)
 
+# Lifespan Function
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    print("Application startup: Seeding database...")
+    db = SessionLocal()
+    try:
+        # Check for default accounts
+        default_accounts = ["Bank Account", "Cash", "Touch and Go E-wallet"]
+        for acc_name in default_accounts:
+            account_exists = db.query(models.Account).filter(models.Account.name == acc_name).first()
+            if not account_exists:
+                crud.create_account(db, schemas.AccountCreate(name=acc_name))
+
+        # Check for initial balance category
+        initial_balance_category_exists = db.query(models.Category).filter(models.Category.name == "Initial Balance").first()
+        if not initial_balance_category_exists:
+            crud.create_category(db, schemas.CategoryCreate(name="Initial Balance", type="Income"))
+
+        print("Database seeding complete.")
+    finally:
+        db.close()
+
+    yield
+
+    # Shutdown logic
+    print("Application shutdown.")
+
 # Create the FastAPI app instance
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Define the path to the frontend build directory
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'dist')
@@ -57,12 +86,6 @@ def get_db():
         db.close()
 
 # --- API Endpoints ---
-# @app.get("/")
-# def read_root():
-#     """A simple endpoint to check if the server is running."""
-#     return {"message": "Welcome to the Financial Tracker API!"}
-
-
 @app.post('/transactions/', response_model=schemas.Transaction)
 def create_new_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
     """
@@ -118,6 +141,14 @@ def delete_transaction_by_id(transaction_id: int, db: Session = Depends(get_db))
     if db_transaction is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return db_transaction
+
+
+@app.get("/accounts/balances", response_model=Dict[str, float])
+def read_account_balances(db: Session = Depends(get_db)):
+    """
+    API endpoint to retrieve the calculated current balance for all accounts.
+    """
+    return crud.get_account_balances(db=db)
 
 
 @app.get("/{catchall:path}", response_class=FileResponse)

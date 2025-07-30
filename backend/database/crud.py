@@ -93,3 +93,24 @@ def delete_transaction(db: Session, transaction_id: int):
         db.delete(db_transaction)
         db.commit()
     return db_transaction
+
+def get_account_balances(db: Session):
+    """
+    Calculates the current balance for every account.
+    Balance = (Sum of all incoming transactions) - (Sum of all outgoing transactions)
+    """
+    accounts = db.query(models.Account).all()
+    balances = {}
+
+    for account in accounts:
+        total_in = db.query(func.sum(models.Transaction.amount)).filter(
+            models.Transaction.to_account == account.name
+        ).scalar() or 0.0
+
+        total_out = db.query(func.sum(models.Transaction.amount)).filter(
+            models.Transaction.from_account == account.name
+        ).scalar() or 0.0
+
+        balances[account.name] = total_in - total_out
+
+    return balances
