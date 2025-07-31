@@ -86,13 +86,13 @@ def get_db():
         db.close()
 
 # --- API Endpoints ---
+# --- TRANSACTIONS ---
 @app.post('/transactions/', response_model=schemas.Transaction)
 def create_new_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
     """
     API endpoint to create a new transaction.
     """
     return crud.create_transaction(db=db, transaction=transaction)
-
 
 @app.get("/transactions/", response_model=List[schemas.Transaction])
 def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -101,7 +101,6 @@ def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get
     """
     transactions = crud.get_transactions(db, skip=skip, limit=limit)
     return transactions
-
 
 @app.get("/transactions/summary/monthly-expenses")
 def read_monthly_expense_summary(db: Session = Depends(get_db)):
@@ -112,29 +111,6 @@ def read_monthly_expense_summary(db: Session = Depends(get_db)):
     # Convert to dict for easy use in frontend
     return {item.category: item.total_amount for item in summary}
 
-
-@app.get("/categories/", response_model=List[schemas.Category])
-def read_categories(type: Optional[str] = None, db: Session = Depends(get_db)):
-    categories = crud.get_categories(db=db, type=type)
-    return categories
-
-
-@app.post("/categories/", response_model=schemas.Category)
-def create_new_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
-    return crud.create_category(db=db, category=category)
-
-
-@app.get("/accounts/", response_model=List[schemas.Account])
-def read_accounts(db: Session = Depends(get_db)):
-    accounts = crud.get_accounts(db=db)
-    return accounts
-
-
-@app.post("/accounts/", response_model=schemas.Account)
-def create_new_account(account: schemas.AccountCreate, db: Session = Depends(get_db)):
-    return crud.create_account(db=db, account=account)
-
-
 @app.delete("/transactions/{transaction_id}", response_model=schemas.Transaction)
 def delete_transaction_by_id(transaction_id: int, db: Session = Depends(get_db)):
     db_transaction = crud.delete_transaction(db=db, transaction_id=transaction_id)
@@ -143,12 +119,62 @@ def delete_transaction_by_id(transaction_id: int, db: Session = Depends(get_db))
     return db_transaction
 
 
+# --- CATEGORIES ---
+@app.get("/categories/", response_model=List[schemas.Category])
+def read_categories(type: Optional[str] = None, db: Session = Depends(get_db)):
+    categories = crud.get_categories(db=db, type=type)
+    return categories
+
+@app.post("/categories/", response_model=schemas.Category)
+def create_new_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    return crud.create_category(db=db, category=category)
+
+@app.put("/categories/{category_id}", response_model=schemas.Category)
+def update_category_by_id(category_id: int, category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    db_category = crud.update_category(db=db, category_id=category_id, category=category)
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return db_category
+
+@app.delete("/categories/{category_id}")
+def delete_category_by_id(category_id: int, db: Session = Depends(get_db)):
+    db_category = crud.delete_category(db=db, category_id=category_id)
+    if db_category is None:
+        raise HTTPException(status_code=403, detail="Category is in use and cannot be deleted")
+    return {"message": "Category deleted successfully"}
+
+
+# --- ACCOUNTS ---
+@app.get("/accounts/", response_model=List[schemas.Account])
+def read_accounts(db: Session = Depends(get_db)):
+    accounts = crud.get_accounts(db=db)
+    return accounts
+
+@app.post("/accounts/", response_model=schemas.Account)
+def create_new_account(account: schemas.AccountCreate, db: Session = Depends(get_db)):
+    return crud.create_account(db=db, account=account)
+
+@app.put("/accounts/{account_id}", response_model=schemas.Account)
+def update_account_by_id(account_id: int, account: schemas.AccountCreate, db: Session = Depends(get_db)):
+    db_account = crud.update_account(db=db, account_id=account_id, account=account)
+    if db_account is None:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return db_account
+
+@app.delete("/accounts/{account_id}")
+def delete_account_by_id(account_id: int, db: Session = Depends(get_db)):
+    db_account = crud.delete_account(db=db, account_id=account_id)
+    if db_account is None:
+        raise HTTPException(status_code=403, detail="Account is in use and cannot be deleted")
+    return {"message": "Account deleted successfully"}
+
 @app.get("/accounts/balances", response_model=Dict[str, float])
 def read_account_balances(db: Session = Depends(get_db)):
     """
     API endpoint to retrieve the calculated current balance for all accounts.
     """
     return crud.get_account_balances(db=db)
+
 
 
 @app.get("/{catchall:path}", response_class=FileResponse)

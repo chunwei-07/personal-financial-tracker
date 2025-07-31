@@ -114,3 +114,48 @@ def get_account_balances(db: Session):
         balances[account.name] = total_in - total_out
 
     return balances
+
+def update_account(db: Session, account_id: int, account: schemas.AccountCreate):
+    db_account = db.query(models.Account).filter(models.Account.id == account_id).first()
+    if db_account:
+        db_account.name = account.name
+        db.commit()
+        db.refresh(db_account)
+    return db_account
+
+def delete_account(db: Session, account_id: int):
+    db_account = db.query(models.Account).filter(models.Account.id == account_id).first()
+    if db_account:
+        # Before deleting, check if this account is used in any transactions
+        usage_count = db.query(models.Transaction).filter(
+            (models.Transaction.from_account == db_account.name) | (models.Transaction.to_account == db_account.name)
+        ).count()
+
+        if usage_count > 0:
+            return None
+        
+        db.delete(db_account)
+        db.commit()
+        return db_account
+    return db_account
+
+def update_category(db: Session, category_id: int, category: schemas.CategoryCreate):
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if db_category:
+        db_category.name = category.name
+        db_category.type = category.type
+        db.commit()
+        db.refresh(db_category)
+    return db_category
+
+def delete_category(db: Session, category_id: int):
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if db_category:
+        usage_count = db.query(models.Transaction).filter(models.Transaction.category == db_category.name).count()
+        if usage_count > 0:
+            return None
+        
+        db.delete(db_category)
+        db.commit()
+        return db_category
+    return db_category
