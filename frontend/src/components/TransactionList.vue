@@ -113,6 +113,7 @@ tr:nth-child(even) {
 }
 .edit-btn {
     background-color: #007bff;
+    color: #fff;
     margin-right: 5px;
 }
 .edit-btn:hover {
