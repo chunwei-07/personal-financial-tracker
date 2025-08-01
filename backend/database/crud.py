@@ -159,3 +159,20 @@ def delete_category(db: Session, category_id: int):
         db.commit()
         return db_category
     return db_category
+
+def update_transaction(db: Session, transaction_id: int, transaction: schemas.TransactionCreate):
+    """
+    Updates an existing transaction in the database.
+    """
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+
+    if db_transaction:
+        # Update the model instance with data from Pydantic schema
+        transaction_data = transaction.model_dump()
+        for key, value in transaction_data.items():
+            setattr(db_transaction, key, value)
+
+        db.commit()
+        db.refresh(db_transaction)
+
+    return db_transaction

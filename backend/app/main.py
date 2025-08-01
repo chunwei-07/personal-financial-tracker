@@ -111,6 +111,16 @@ def read_monthly_expense_summary(db: Session = Depends(get_db)):
     # Convert to dict for easy use in frontend
     return {item.category: item.total_amount for item in summary}
 
+@app.put("/transactions/{transaction_id}", response_model=schemas.Transaction)
+def update_transaction_by_id(transaction_id: int, transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
+    """
+    API endpoint to update existing transaction.
+    """
+    updated_transaction = crud.update_transaction(db=db, transaction_id=transaction_id, transaction=transaction)
+    if updated_transaction is None:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return updated_transaction
+
 @app.delete("/transactions/{transaction_id}", response_model=schemas.Transaction)
 def delete_transaction_by_id(transaction_id: int, db: Session = Depends(get_db)):
     db_transaction = crud.delete_transaction(db=db, transaction_id=transaction_id)

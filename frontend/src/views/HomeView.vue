@@ -4,10 +4,13 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import TransactionForm from '@/components/TransactionForm.vue'
 import TransactionList from '@/components/TransactionList.vue'
 import ExpenseChart from '@/components/ExpenseChart.vue'
+import EditTransactionModal from '@/components/EditTransactionModal.vue'
 
 // The main reactive array that will hold the transaction data
 const transactions = ref([])
 const expenseSummary = ref([])
+const isEditModalVisible = ref(false)
+const transactionToEdit = ref(null)
 
 // Function to fetch summary data from new endpoint
 const fetchExpenseSummary = async () => {
@@ -32,6 +35,12 @@ const fetchTransactions = async () => {
   } catch (error) {
     console.error('Error fetching transactions:', error)
   }
+}
+
+// Function to open Edit modal
+const openEditModal = (transaction) => {
+  transactionToEdit.value = transaction
+  isEditModalVisible.value = true
 }
 
 // Function that runs whenever a transaction is added
@@ -71,8 +80,16 @@ const chartData = computed(() => {
       <TransactionList
         :transactions="transactions" 
         @transaction-deleted="handleTransactionAdded"
+        @edit="openEditModal"
       />
     </div>
+
+    <EditTransactionModal
+      :show="isEditModalVisible"
+      :transaction="transactionToEdit"
+      @close="isEditModalVisible = false"
+      @transaction-updated="handleTransactionAdded"
+    />
   </main>
 </template>
 

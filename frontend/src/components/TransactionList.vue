@@ -27,7 +27,7 @@ const formatDate = (dateString) => {
 // }
 
 // Delete transaction
-const emit = defineEmits(['transaction-deleted'])
+const emit = defineEmits(['transaction-deleted', 'edit'])
 
 const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this transaction?')) {
@@ -79,6 +79,7 @@ const handleDelete = async (id) => {
                     <td>{{ transaction.from_account }}</td>
                     <td>{{ transaction.to_account }}</td>
                     <td>
+                        <button @click="$emit('edit', transaction)" class="edit-btn">Edit</button>
                         <button @click="handleDelete(transaction.id)" class="delete-btn">X</button>
                     </td>
                 </tr>
@@ -109,6 +110,13 @@ tr:nth-child(even) {
 }
 .amount {
     font-weight: bold;
+}
+.edit-btn {
+    background-color: #007bff;
+    margin-right: 5px;
+}
+.edit-btn:hover {
+    background-color: #0056b3;
 }
 .delete-btn {
     background-color: #e74c3c;
