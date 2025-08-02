@@ -1,5 +1,70 @@
 <script setup>
-// Logic here
+import { ref, reactive, computed, watch } from 'vue';
+import TransactionList from '@/components/TransactionList.vue';
+import ExpenseChart from '@/components/ExpenseChart.vue';
+import TrendChart from '@/components/TrendChart.vue';
+
+// --- STATE ---
+const filters = reactive({
+    type: 'Expense',
+    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+});
+
+const transactions = ref([]);
+const categorySummary = ref({});
+const monthlySummary = ref({});
+const isLoading = ref(false);
+
+// --- API FUNCTIONS ---
+const fetchData = async () => {
+    isLoading.value = true;
+    const params = new URLSearchParams({
+        start_date: filters.startDate,
+        end_date: filters.endDate,
+        type: filters.type
+    }).toString();
+
+    try {
+        const [transRes, catRes, monthRes] = await Promise.all([
+            fetch(`/transactions/?${params}`),
+            fetch(`/transactions/summary/by-category?${params}`),
+            fetch(`/transactions/summary/by-month?${params}`)
+        ]);
+
+        transactions.value = await transRes.json();
+        categorySummary.value = await catRes.json();
+        monthlySummary.value = await monthRes.json();
+
+    } catch (error) {
+        console.error("Failed to fetch report data:", error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// --- COMPUTED PROPERTIES FOR CHARTS ---
+const categoryChartData = computed(() => ({
+    labels: Object.keys(categorySummary.value),
+    datasets: [{
+        backgroundColor: ['#41B883', '#E46651', '#00D8FF', '#DD1B16', '#F4D03F', '#5D6D7E'],
+        data: Object.values(categorySummary.value)
+    }]
+}));
+
+const monthlyChartData = computed(() => ({
+    labels: Object.keys(monthlySummary.value),
+    datasets: [{
+        label: `${filters.type} Trend`,
+        backgroundColor: '#007bff',
+        data: Object.values(monthlySummary.value)
+    }]
+}));
+
+// --- WATCHER ---
+// This watches the 'filters' object and calls fetchData whenever a filter is changed.
+watch(filters, fetchData, { immediate: true, deep: true });
+
 </script>
 
 <template>
@@ -8,20 +73,47 @@
 
         <div class="filters-card">
             <h2>Filters</h2>
-            <p>Filter controls will go here.</p>
+            <div class="filter-controls">
+                <div class="form-group">
+                    <label for="type">Transaction Type</label>
+                    <select id="type" v-model="filters.type">
+                        <option>Expense</option>
+                        <option>Income</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" v-model="filters.startDate" />
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" v-model="filters.endDate" />
+                </div>
+            </div>
         </div>
 
-        <div class="results-container">
-            <div class="chart-area">
-                <h3>Summary Chart</h3>
-                <p>A dynamic chart will go here.</p>
+        <div v-if="isLoading" class="loading-state">Loading Report...</div>
+
+        <div v-else class="results-container">
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>{{ filters.type }} Breakdown by Category</h3>
+                    <ExpenseChart v-if="Object.keys(categorySummary).length > 0" :chart-data="categoryChartData" />
+                    <p v-else>No data for this period.</p>
+                </div>
+                <div class="chart-card">
+                    <h3>{{ filters.type }} Trend by Month</h3>
+                    <TrendChart v-if="Object.keys(monthlySummary).length > 0" :chart-data="monthlyChartData" />
+                    <p v-else>No data for this period.</p>
+                </div>
             </div>
+
             <div class="list-area">
                 <h3>Filtered Transactions</h3>
-                <p>A list of transactions matching the filters will go here.</p>
+                <TransactionList :transactions="transactions" @transaction-deleted="fetchData" />
+                <p v-if="transactions.length === 0">No transactions match the selected filters.</p>
             </div>
         </div>
-
     </div>
 </template>
 
@@ -38,7 +130,45 @@
     border-radius: 8px;
     margin-bottom: 2rem;
 }
-.results-container {
+.filter-controls {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+.form-group label {
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+.form-group input, .form-group select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.loading-state {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+}
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+.chart-card {
+    background-color: #f9f9f9;
+    padding: 1.5rem;
+    border-radius: 8px;
+    height: 400px;
+}
+.chart-card p {
+    text-align: center;
     margin-top: 2rem;
+}
+.list-area {
+    margin-top: 3rem;
 }
 </style>

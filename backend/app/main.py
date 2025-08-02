@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
+from datetime import date
 import os
 
 from database import models, crud
@@ -44,16 +45,6 @@ async def lifespan(app: FastAPI):
 
 # Create the FastAPI app instance
 app = FastAPI(lifespan=lifespan)
-
-# Define the path to the frontend build directory
-FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'dist')
-
-# Mount the 'assets' directory from the build folder
-app.mount(
-    "/assets",
-    StaticFiles(directory=os.path.join(FRONTEND_BUILD_DIR, 'assets')),
-    name="assets"
-)
 
 # --- CORS Configuration ---
 # This is crucial for allowing Vue.js frontend
@@ -95,21 +86,42 @@ def create_new_transaction(transaction: schemas.TransactionCreate, db: Session =
     return crud.create_transaction(db=db, transaction=transaction)
 
 @app.get("/transactions/", response_model=List[schemas.Transaction])
-def read_transactions(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """
-    API endpoint to retrieve all transactions.
-    """
-    transactions = crud.get_transactions(db, skip=skip, limit=limit)
+def read_transactions(
+    skip: int = 0,
+    limit: int = 100,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    transactions = crud.get_transactions(
+        db, skip=skip, limit=limit, start_date=start_date, end_date=end_date, type=type
+    )
     return transactions
 
-@app.get("/transactions/summary/monthly-expenses")
-def read_monthly_expense_summary(db: Session = Depends(get_db)):
-    """
-    API endpoint to get a summary of expenses per category for the current month.
-    """
-    summary = crud.get_monthly_expense_summary(db=db)
-    # Convert to dict for easy use in frontend
-    return {item.category: item.total_amount for item in summary}
+@app.get("/transactions/summary/by-category", response_model=Dict[str, float])
+def read_summary_by_category(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: str = "Expense",
+    db: Session = Depends(get_db),
+):
+    summary = crud.get_summary_by_category(
+        db=db, start_date=start_date, end_date=end_date, type=type
+    )
+    return summary
+
+@app.get("/transactions/summary/by-month", response_model=Dict[str, float])
+def read_summary_by_month(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: str = "Expense",
+    db: Session = Depends(get_db),
+):
+    summary = crud.get_summary_by_month(
+        db=db, start_date=start_date, end_date=end_date, type=type
+    )
+    return summary
 
 @app.put("/transactions/{transaction_id}", response_model=schemas.Transaction)
 def update_transaction_by_id(transaction_id: int, transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
@@ -186,11 +198,26 @@ def read_account_balances(db: Session = Depends(get_db)):
     return crud.get_account_balances(db=db)
 
 
+# Define the path to the frontend build directory
+FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'dist')
 
-@app.get("/{catchall:path}", response_class=FileResponse)
+# Mount the 'assets' directory from the build folder
+app.mount(
+    "/assets",
+    StaticFiles(directory=os.path.join(FRONTEND_BUILD_DIR, 'assets')),
+    name="assets"
+)
+
+@app.get("/{catchall:path}", response_class=FileResponse, include_in_schema=False)
 def serve_frontend(catchall: str):
     """
     Catch-all endpoint to serve the frontend's index.html.
     This allows Vue Router to handle routing on the client side.
     """
+    # Add a check to avoid trying to serve non-existent files
+    file_path = os.path.join(FRONTEND_BUILD_DIR, catchall)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # If it's not a file, it's a client-side route, serve index.html
     return FileResponse(os.path.join(FRONTEND_BUILD_DIR, 'index.html'))

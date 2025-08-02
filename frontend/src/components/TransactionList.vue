@@ -7,6 +7,10 @@ defineProps({
     transactions: {
         type: Array,
         required: true
+    },
+    title: {
+        type: String,
+        required: false
     }
 })
 
@@ -51,7 +55,7 @@ const handleDelete = async (id) => {
 
 <template>
     <div class="transaction-list">
-        <h2>Recent Transactions</h2>
+        <h2 v-if="title">{{ title }}</h2>
         <div v-if="transactions.length === 0" class="empty-state">
             No transactions yet. Add one using the form above!
         </div>

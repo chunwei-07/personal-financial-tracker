@@ -78,6 +78,7 @@ const chartData = computed(() => {
       <ExpenseChart v-if="Object.keys(expenseSummary).length > 0" :chart-data="chartData" />
       <TransactionForm @transaction-added="handleTransactionAdded" />
       <TransactionList
+        title="Recent Transactions"
         :transactions="transactions" 
         @transaction-deleted="handleTransactionAdded"
         @edit="openEditModal"

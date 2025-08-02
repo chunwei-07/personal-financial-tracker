@@ -2,14 +2,31 @@ from . import models
 from app import schemas
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import datetime, date 
+from datetime import datetime, date , timedelta
 from typing import Optional
 
-def get_transactions(db: Session, skip: int = 0, limit: int = 100):
+def get_transactions(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: Optional[str] = None,
+):
     """
-    Retrieve all transaction recorrds from the database.
+    Retrieve transaction records from the database with optional filtering.
     """
-    return db.query(models.Transaction).order_by(models.Transaction.date.desc()).offset(skip).limit(limit).all()
+    query = db.query(models.Transaction)
+
+    if start_date:
+        query = query.filter(models.Transaction.date >= start_date)
+    if end_date:
+        # Add 1 day to end_date to make the filter inclusive
+        query = query.filter(models.Transaction.date < end_date + timedelta(days=1))
+    if type:
+        query = query.filter(models.Transaction.type == type)
+
+    return query.order_by(models.Transaction.date.desc()).offset(skip).limit(limit).all()
 
 def create_transaction(db: Session, transaction: schemas.TransactionCreate):
     """
@@ -28,25 +45,27 @@ def create_transaction(db: Session, transaction: schemas.TransactionCreate):
     db.refresh(db_transaction)
     return db_transaction
 
-def get_monthly_expense_summary(db: Session):
+def get_summary_by_category(
+    db: Session,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: str = "Expense",
+):
     """
-    Calculates total expenses per category for the current month.
+    Calculates total transaction amounts per category for a given date range and type.
     """
-    today = date.today()
-    start_of_month = today.replace(day=1)
-
-    # Query the database, grouping by category and summing the amount
-    summary = db.query(
+    query = db.query(
         models.Transaction.category,
-        func.sum(models.Transaction.amount).label('total_amount')
-    ).filter(
-        models.Transaction.type == 'Expense',
-        func.date(models.Transaction.date) >= start_of_month
-    ).group_by(
-        models.Transaction.category
-    ).all()
+        func.sum(models.Transaction.amount).label("total_amount"),
+    ).filter(models.Transaction.type == type)
 
-    return summary
+    if start_date:
+        query = query.filter(models.Transaction.date >= start_date)
+    if end_date:
+        query = query.filter(models.Transaction.date < end_date + timedelta(days=1))
+
+    summary = query.group_by(models.Transaction.category).all()
+    return {item.category: item.total_amount for item in summary}
 
 def get_categories(db: Session, type: Optional[str] = None):
     query = db.query(models.Category)
@@ -176,3 +195,27 @@ def update_transaction(db: Session, transaction_id: int, transaction: schemas.Tr
         db.refresh(db_transaction)
 
     return db_transaction
+
+def get_summary_by_month(
+    db: Session,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: str = "Expense",
+):
+    """
+    Calculates total transaction amounts per month for a given date range and type.
+    """
+    query = db.query(
+        # Extract Year and Month from the date. SQLite uses strftime.
+        func.strftime("%Y-%m", models.Transaction.date).label("month"),
+        func.sum(models.Transaction.amount).label("total_amount"),
+    ).filter(models.Transaction.type == type)
+
+    if start_date:
+        query = query.filter(models.Transaction.date >= start_date)
+    if end_date:
+        query = query.filter(models.Transaction.date < end_date + timedelta(days=1))
+
+    summary = query.group_by("month").order_by("month").all()
+    return {item.month: item.total_amount for item in summary}
+
