@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 # Base schema with fields common to both creating and reading transactions
 class TransactionBase(BaseModel):
@@ -48,3 +48,7 @@ class Account(AccountBase):
     id: int
     class Config:
         from_attributes = True
+
+class TransactionPage(BaseModel):
+    total_count: int
+    transactions: List[Transaction]

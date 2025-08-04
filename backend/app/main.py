@@ -85,19 +85,19 @@ def create_new_transaction(transaction: schemas.TransactionCreate, db: Session =
     """
     return crud.create_transaction(db=db, transaction=transaction)
 
-@app.get("/transactions/", response_model=List[schemas.Transaction])
+@app.get("/transactions/", response_model=schemas.TransactionPage)
 def read_transactions(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 10,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     type: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    transactions = crud.get_transactions(
+    transaction_page = crud.get_transactions(
         db, skip=skip, limit=limit, start_date=start_date, end_date=end_date, type=type
     )
-    return transactions
+    return transaction_page
 
 @app.get("/transactions/summary/by-category", response_model=Dict[str, float])
 def read_summary_by_category(

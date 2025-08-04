@@ -8,7 +8,7 @@ from typing import Optional
 def get_transactions(
     db: Session,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 10,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     type: Optional[str] = None,
@@ -18,6 +18,7 @@ def get_transactions(
     """
     query = db.query(models.Transaction)
 
+    # Apply filters first
     if start_date:
         query = query.filter(models.Transaction.date >= start_date)
     if end_date:
@@ -26,7 +27,13 @@ def get_transactions(
     if type:
         query = query.filter(models.Transaction.type == type)
 
-    return query.order_by(models.Transaction.date.desc()).offset(skip).limit(limit).all()
+    # Get the total count before pagination
+    total_count = query.count()
+
+    # Get the paginated list of transactions
+    transactions = query.order_by(models.Transaction.date.desc()).offset(skip).limit(limit).all()
+
+    return {"total_count": total_count, "transactions": transactions}
 
 def create_transaction(db: Session, transaction: schemas.TransactionCreate):
     """

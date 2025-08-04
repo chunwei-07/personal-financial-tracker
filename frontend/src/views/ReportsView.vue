@@ -3,6 +3,7 @@ import { ref, reactive, computed, watch } from 'vue';
 import TransactionList from '@/components/TransactionList.vue';
 import ExpenseChart from '@/components/ExpenseChart.vue';
 import TrendChart from '@/components/TrendChart.vue';
+import PaginationControls from '@/components/PaginationControls.vue';
 
 // --- STATE ---
 const filters = reactive({
@@ -16,13 +17,23 @@ const categorySummary = ref({});
 const monthlySummary = ref({});
 const isLoading = ref(false);
 
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const totalTransactions = ref(0);
+
 // --- API FUNCTIONS ---
 const fetchData = async () => {
     isLoading.value = true;
+
+    // Calculate skip for pagination
+    const skip = (currentPage.value - 1) * itemsPerPage.value;
+
     const params = new URLSearchParams({
         start_date: filters.startDate,
         end_date: filters.endDate,
-        type: filters.type
+        type: filters.type,
+        skip: skip,
+        limit: itemsPerPage.value
     }).toString();
 
     try {
@@ -32,7 +43,10 @@ const fetchData = async () => {
             fetch(`/transactions/summary/by-month?${params}`)
         ]);
 
-        transactions.value = await transRes.json();
+        const transData = await transRes.json();
+        transactions.value = transData.transactions;
+        totalTransactions.value = transData.total_count;
+
         categorySummary.value = await catRes.json();
         monthlySummary.value = await monthRes.json();
 
@@ -61,9 +75,23 @@ const monthlyChartData = computed(() => ({
     }]
 }));
 
+// --- HANDLER ---
+const handlePageChange = (newPage) => {
+    currentPage.value = newPage;
+};
+
 // --- WATCHER ---
 // This watches the 'filters' object and calls fetchData whenever a filter is changed.
-watch(filters, fetchData, { immediate: true, deep: true });
+watch (filters, () => {
+    // If filters change, always go back to the first page
+    if (currentPage.value !== 1) {
+        currentPage.value = 1;
+    } else {
+        fetchData();
+    }
+}, { immediate: true, deep: true });
+
+watch(currentPage, fetchData);
 
 </script>
 
@@ -111,7 +139,14 @@ watch(filters, fetchData, { immediate: true, deep: true });
             <div class="list-area">
                 <h3>Filtered Transactions</h3>
                 <TransactionList :transactions="transactions" @transaction-deleted="fetchData" />
-                <p v-if="transactions.length === 0">No transactions match the selected filters.</p>
+                <PaginationControls 
+                    v-if="transactions.length > 0"
+                    :current-page="currentPage"
+                    :total-items="totalTransactions"
+                    :items-per-page="itemsPerPage"
+                    @page-changed="handlePageChange"
+                />
+                <p v-if="transactions.length === 0 && !isLoading">No transactions match the selected filters.</p>
             </div>
         </div>
     </div>
