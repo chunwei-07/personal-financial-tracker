@@ -1,10 +1,10 @@
 <!-- Vue component for pie chart -->
 <script setup>
 import { Pie } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale } from 'chart.js'
+import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 
 // Register the components to use
-ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
+ChartJS.register(Title, Tooltip, Legend, ArcElement)
 
 // The component accepts 'chartData' as a prop from its parent
 defineProps({

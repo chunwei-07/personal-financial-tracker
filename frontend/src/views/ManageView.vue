@@ -1,26 +1,53 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import RecurringTransactionForm from '@/components/RecurringTransactionForm.vue';
 
 const accounts = ref([]);
 const incomeCategories = ref([]);
 const expenseCategories = ref([]);
+const recurringRules = ref([]);
+
+const isFormVisible = ref(false);
+const ruleToEdit = ref(null);
 
 const fetchData = async () => {
     try {
-        const [accRes, incCatRes, expCatRes] = await Promise.all([
+        const [accRes, incCatRes, expCatRes, recRes] = await Promise.all([
             fetch('/accounts/'),
             fetch('/categories/?type=Income'),
-            fetch('/categories/?type=Expense')
+            fetch('/categories/?type=Expense'),
+            fetch('/recurring-transactions/')
         ]);
         accounts.value = await accRes.json();
         incomeCategories.value = await incCatRes.json();
         expenseCategories.value = await expCatRes.json();
+        recurringRules.value = await recRes.json();
     } catch (error) {
         console.error("Failed to fetch data:", error);
     }
 };
 
 onMounted(fetchData);
+
+const openForm = (rule = null) => {
+    ruleToEdit.value = rule;
+    isFormVisible.value = true;
+};
+
+const handleSaved = () => {
+    fetchData();
+};
+
+const handleDeleteRecurring = async (ruleId) => {
+    if (!confirm('Are you sure you want to delete this recurring rule?')) return;
+    try {
+        const response = await fetch(`/recurring-transactions/${ruleId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete rule.');
+        fetchData();
+    } catch (error) {
+        alert(error.message);
+    }
+};
 
 const handleEdit = async (item, itemType) => {
     const newName = prompt(`Enter new name for "${item.name}":`, item.name);
@@ -75,7 +102,25 @@ const handleDelete = async (item, itemType) => {
 
 <template>
     <div class="manage-container">
-        <h1>Manage Accounts & Categories</h1>
+        <h1>Manage Your App</h1>
+
+        <!-- Recurring Rules Section -->
+        <div class="list-card recurring-card">
+            <div class="card-header">
+                <h2>Recurring Transaction Rules</h2>
+                <button @click="openForm()" class="add-new-btn">Add New Rule</button>
+            </div>
+            <ul>
+                <li v-for="rule in recurringRules" :key="rule.id">
+                    <span>Day {{ rule.day_of_month }}: {{ rule.description }} ({{ rule.amount }})</span>
+                    <div class="actions">
+                        <button @click="openForm(rule)" class="edit-btn">Edit</button>
+                        <button @click="handleDeleteRecurring(rule.id)" class="delete-btn">Delete</button>
+                    </div>
+                </li>
+            </ul>
+            <p v-if="recurringRules.length === 0">No recurring rules defined yet.</p>
+        </div>
 
         <div class="grid">
             <!-- Accounts Section -->
@@ -121,6 +166,14 @@ const handleDelete = async (item, itemType) => {
             </div>
         </div>
     </div>
+
+    <!-- Add modal component -->
+    <RecurringTransactionForm
+        :show="isFormVisible"
+        :rule="ruleToEdit"
+        @close="isFormVisible = false"
+        @saved="handleSaved"
+    />
 </template>
 
 <style scoped>
@@ -135,6 +188,31 @@ const handleDelete = async (item, itemType) => {
     gap: 2rem;
     margin-top: 2rem;
 }
+.recurring-card {
+    grid-column: 1 / -1;
+    margin-bottom: 2rem;
+}
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.card-header h2 {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+.add-new-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
 .list-card {
     background-color: #fff;
     border: 1px solid #e0e0e0;
@@ -143,7 +221,6 @@ const handleDelete = async (item, itemType) => {
 }
 .list-card h2 {
     margin-top: 0;
-    border-bottom: 2px solid #f0f0f0;
     padding-bottom: 0.5rem;
 }
 ul {

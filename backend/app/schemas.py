@@ -59,3 +59,22 @@ class NetWorthHistory(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RecurringTransactionBase(BaseModel):
+    day_of_month: int
+    type: str
+    amount: float
+    category: str
+    description: str
+    from_account: Optional[str] = None
+    to_account: Optional[str] = None
+
+class RecurringTransactionCreate(RecurringTransactionBase):
+    pass
+
+class RecurringTransaction(RecurringTransactionBase):
+    id: int
+    last_processed_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

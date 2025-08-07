@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, date, timedelta, timezone
 from typing import Optional
 
+# --- TRANSACTIONS ---
 def get_transactions(
     db: Session,
     skip: int = 0,
@@ -52,28 +53,32 @@ def create_transaction(db: Session, transaction: schemas.TransactionCreate):
     db.refresh(db_transaction)
     return db_transaction
 
-def get_summary_by_category(
-    db: Session,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    type: str = "Expense",
-):
+def update_transaction(db: Session, transaction_id: int, transaction: schemas.TransactionCreate):
     """
-    Calculates total transaction amounts per category for a given date range and type.
+    Updates an existing transaction in the database.
     """
-    query = db.query(
-        models.Transaction.category,
-        func.sum(models.Transaction.amount).label("total_amount"),
-    ).filter(models.Transaction.type == type)
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
 
-    if start_date:
-        query = query.filter(models.Transaction.date >= start_date)
-    if end_date:
-        query = query.filter(models.Transaction.date < end_date + timedelta(days=1))
+    if db_transaction:
+        # Update the model instance with data from Pydantic schema
+        transaction_data = transaction.model_dump()
+        for key, value in transaction_data.items():
+            setattr(db_transaction, key, value)
 
-    summary = query.group_by(models.Transaction.category).all()
-    return {item.category: item.total_amount for item in summary}
+        db.commit()
+        db.refresh(db_transaction)
 
+    return db_transaction
+
+def delete_transaction(db: Session, transaction_id: int):
+    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+    if db_transaction:
+        db.delete(db_transaction)
+        db.commit()
+    return db_transaction
+
+
+# --- CATEGORIES ---
 def get_categories(db: Session, type: Optional[str] = None):
     query = db.query(models.Category)
     if type:
@@ -100,6 +105,29 @@ def create_category(db: Session, category: schemas.CategoryCreate):
     db.refresh(db_category)
     return db_category
 
+def update_category(db: Session, category_id: int, category: schemas.CategoryCreate):
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if db_category:
+        db_category.name = category.name
+        db_category.type = category.type
+        db.commit()
+        db.refresh(db_category)
+    return db_category
+
+def delete_category(db: Session, category_id: int):
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if db_category:
+        usage_count = db.query(models.Transaction).filter(models.Transaction.category == db_category.name).count()
+        if usage_count > 0:
+            return None
+        
+        db.delete(db_category)
+        db.commit()
+        return db_category
+    return db_category
+
+
+# --- ACCOUNTS ---
 def get_accounts(db: Session):
     return db.query(models.Account).order_by(models.Account.name).all()
 
@@ -112,13 +140,6 @@ def create_account(db: Session, account: schemas.AccountCreate):
     db.commit()
     db.refresh(db_account)
     return db_account
-
-def delete_transaction(db: Session, transaction_id: int):
-    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
-    if db_transaction:
-        db.delete(db_transaction)
-        db.commit()
-    return db_transaction
 
 def get_account_balances(db: Session):
     """
@@ -165,43 +186,29 @@ def delete_account(db: Session, account_id: int):
         return db_account
     return db_account
 
-def update_category(db: Session, category_id: int, category: schemas.CategoryCreate):
-    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
-    if db_category:
-        db_category.name = category.name
-        db_category.type = category.type
-        db.commit()
-        db.refresh(db_category)
-    return db_category
 
-def delete_category(db: Session, category_id: int):
-    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
-    if db_category:
-        usage_count = db.query(models.Transaction).filter(models.Transaction.category == db_category.name).count()
-        if usage_count > 0:
-            return None
-        
-        db.delete(db_category)
-        db.commit()
-        return db_category
-    return db_category
-
-def update_transaction(db: Session, transaction_id: int, transaction: schemas.TransactionCreate):
+# --- SUMMARY ---
+def get_summary_by_category(
+    db: Session,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    type: str = "Expense",
+):
     """
-    Updates an existing transaction in the database.
+    Calculates total transaction amounts per category for a given date range and type.
     """
-    db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+    query = db.query(
+        models.Transaction.category,
+        func.sum(models.Transaction.amount).label("total_amount"),
+    ).filter(models.Transaction.type == type)
 
-    if db_transaction:
-        # Update the model instance with data from Pydantic schema
-        transaction_data = transaction.model_dump()
-        for key, value in transaction_data.items():
-            setattr(db_transaction, key, value)
+    if start_date:
+        query = query.filter(models.Transaction.date >= start_date)
+    if end_date:
+        query = query.filter(models.Transaction.date < end_date + timedelta(days=1))
 
-        db.commit()
-        db.refresh(db_transaction)
-
-    return db_transaction
+    summary = query.group_by(models.Transaction.category).all()
+    return {item.category: item.total_amount for item in summary}
 
 def get_summary_by_month(
     db: Session,
@@ -226,6 +233,8 @@ def get_summary_by_month(
     summary = query.group_by("month").order_by("month").all()
     return {item.month: item.total_amount for item in summary}
 
+
+# --- NET WORTH ---
 def record_net_worth_snapshot(db: Session):
     """
     Calculates the current total net worth and saves it as a snapshot for today.
@@ -259,4 +268,82 @@ def get_net_worth_history(db: Session, start_date: Optional[date] = None, end_da
         query = query.filter(models.NetWorthHistory.date < end_date + timedelta(days=1))
 
     return query.order_by(models.NetWorthHistory.date).all()
+
+
+# --- RECURRING TRANSACTIONS ---
+def get_recurring_transactions(db: Session):
+    return db.query(models.RecurringTransaction).order_by(models.RecurringTransaction.day_of_month).all()
+
+def create_recurring_transaction(db: Session, rec_transaction: schemas.RecurringTransactionCreate):
+    rec_data = rec_transaction.model_dump()
+    if rec_data['type'] == 'Expense':
+        rec_data['to_account'] = None
+    elif rec_data['type'] == 'Income':
+        rec_data['from_account'] = None
+    
+    db_rec_transaction = models.RecurringTransaction(**rec_data)
+    db.add(db_rec_transaction)
+    db.commit()
+    db.refresh(db_rec_transaction)
+    return db_rec_transaction
+
+def update_recurring_transaction(db: Session, rec_transaction_id: int, rec_transaction: schemas.RecurringTransactionCreate):
+    db_rec_transaction = db.query(models.RecurringTransaction).filter(models.RecurringTransaction.id == rec_transaction_id).first()
+    if db_rec_transaction:
+        rec_data = rec_transaction.model_dump()
+        if rec_data['type'] == 'Expense':
+            rec_data['to_account'] = None
+        elif rec_data['type'] == 'Income':
+            rec_data['from_account'] = None
+
+        for key, value in rec_data.items():
+            setattr(db_rec_transaction, key, value)
+        db.commit()
+        db.refresh(db_rec_transaction)
+    return db_rec_transaction
+
+def delete_recurring_transaction(db: Session, rec_transaction_id: int):
+    db_rec_transaction = db.query(models.RecurringTransaction).filter(models.RecurringTransaction.id == rec_transaction_id).first()
+    if db_rec_transaction:
+        db.delete(db_rec_transaction)
+        db.commit()
+    return db_rec_transaction
+
+def process_recurring_transactions(db: Session):
+    """
+    Checks all recurring transaction rules and creates transactions if they are due.
+    """
+    today = datetime.now(timezone.utc).date()
+    all_rules = db.query(models.RecurringTransaction).all()
+
+    for rule in all_rules:
+        # Check if the rule's day has passed in the current month
+        if today.day >= rule.day_of_month:
+            start_of_month = today.replace(day=1)
+
+            transaction_exists_this_month = db.query(models.Transaction).filter(
+                models.Transaction.category == rule.category,
+                models.Transaction.type == rule.type,
+                func.date(models.Transaction.date) >= start_of_month
+            ).first()
+
+            if not transaction_exists_this_month:
+                print(f"Processing recurring transaction as it was not found this month: {rule.description}")
+                
+                # Create the new transaction. We'll set its date to be the rule's day for this month.
+                transaction_date = today.replace(day=rule.day_of_month)
+
+                new_transaction = schemas.TransactionCreate(
+                    type=rule.type,
+                    amount=rule.amount,
+                    category=rule.category,
+                    description=f"(Recurring) {rule.description}", # Use the special description
+                    from_account=rule.from_account,
+                    to_account=rule.to_account
+                )
+
+                db_transaction = models.Transaction(**new_transaction.model_dump(), date=transaction_date)
+                
+                db.add(db_transaction)
+                db.commit()
 

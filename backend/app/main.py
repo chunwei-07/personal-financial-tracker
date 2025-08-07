@@ -34,10 +34,13 @@ async def lifespan(app: FastAPI):
         if not initial_balance_category_exists:
             crud.create_category(db, schemas.CategoryCreate(name="Initial Balance", type="Income"))
 
+        # Process any due recurring transactions first
+        crud.process_recurring_transactions(db)
+
         # Record net worth snapshot on every startup
         crud.record_net_worth_snapshot(db)
 
-        print("Database seeding complete and net worth snapshot complete.")
+        print("Database seeding, recurring transactions, and net worth snapshot complete.")
     finally:
         db.close()
 
@@ -213,6 +216,51 @@ def read_net_worth_history(
     """
     history = crud.get_net_worth_history(db=db, start_date=start_date, end_date=end_date)
     return history
+
+
+# --- RECURRING TRANSACTIONS ---
+@app.get("/recurring-transactions/", response_model=List[schemas.RecurringTransaction])
+def read_recurring_transactions(db: Session = Depends(get_db)):
+    """
+    API endpoint to retrieve all recurring transaction rules.
+    """
+    return crud.get_recurring_transactions(db=db)
+
+@app.post("/recurring-transactions/", response_model=schemas.RecurringTransaction)
+def create_new_recurring_transaction(
+    rec_transaction: schemas.RecurringTransactionCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    API endpoint to create a new recurring transaction rule.
+    """
+    return crud.create_recurring_transaction(db=db, rec_transaction=rec_transaction)
+
+@app.put("/recurring-transactions/{rec_transaction_id}", response_model=schemas.RecurringTransaction)
+def update_recurring_transaction_by_id(
+    rec_transaction_id: int,
+    rec_transaction: schemas.RecurringTransactionCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    API endpoint to update an existing recurring transaction rule.
+    """
+    updated_rec_transaction = crud.update_recurring_transaction(
+        db=db, rec_transaction_id=rec_transaction_id, rec_transaction=rec_transaction
+    )
+    if updated_rec_transaction is None:
+        raise HTTPException(status_code=404, detail="Recurring transaction rule not found")
+    return updated_rec_transaction
+
+@app.delete("/recurring-transactions/{rec_transaction_id}")
+def delete_recurring_transaction_by_id(rec_transaction_id: int, db: Session = Depends(get_db)):
+    """
+    API endpoint to delete a recurring transaction rule.
+    """
+    deleted_rec_transaction = crud.delete_recurring_transaction(db=db, rec_transaction_id=rec_transaction_id)
+    if deleted_rec_transaction is None:
+        raise HTTPException(status_code=404, detail="Recurring transaction rule not found")
+    return {"message": "Recurring transaction rule deleted successfully"}
 
 
 # Define the path to the frontend build directory

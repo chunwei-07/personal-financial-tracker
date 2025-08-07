@@ -37,3 +37,20 @@ class NetWorthHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     date = Column(DateTime(timezone=True), unique=True, index=True, nullable=False)
     value = Column(Float, nullable=False)
+
+class RecurringTransaction(Base):
+    __tablename__ = "recurring_transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    day_of_month = Column(Integer, nullable=False)
+
+    # We store all the transaction details needed to create the real transaction
+    type = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    category = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    from_account = Column(String)
+    to_account = Column(String)
+
+    # Track when this rule was last processed to prevent duplicates
+    last_processed_date = Column(DateTime(timezone=True), nullable=True)
