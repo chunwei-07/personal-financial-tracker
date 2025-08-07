@@ -30,3 +30,10 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True,index=True)
     name = Column(String, unique=True, index=True, nullable=False)
+
+class NetWorthHistory(Base):
+    __tablename__ = "net_worth_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(DateTime(timezone=True), unique=True, index=True, nullable=False)
+    value = Column(Float, nullable=False)

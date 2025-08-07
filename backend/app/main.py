@@ -34,7 +34,10 @@ async def lifespan(app: FastAPI):
         if not initial_balance_category_exists:
             crud.create_category(db, schemas.CategoryCreate(name="Initial Balance", type="Income"))
 
-        print("Database seeding complete.")
+        # Record net worth snapshot on every startup
+        crud.record_net_worth_snapshot(db)
+
+        print("Database seeding complete and net worth snapshot complete.")
     finally:
         db.close()
 
@@ -196,6 +199,20 @@ def read_account_balances(db: Session = Depends(get_db)):
     API endpoint to retrieve the calculated current balance for all accounts.
     """
     return crud.get_account_balances(db=db)
+
+
+# --- NET WORTH HISTORY ---
+@app.get("/net-worth/history", response_model=List[schemas.NetWorthHistory])
+def read_net_worth_history(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    API endpoint to retrieve the historical net worth data.
+    """
+    history = crud.get_net_worth_history(db=db, start_date=start_date, end_date=end_date)
+    return history
 
 
 # Define the path to the frontend build directory

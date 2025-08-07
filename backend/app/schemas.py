@@ -52,3 +52,10 @@ class Account(AccountBase):
 class TransactionPage(BaseModel):
     total_count: int
     transactions: List[Transaction]
+
+class NetWorthHistory(BaseModel):
+    date: datetime
+    value: float
+
+    class Config:
+        from_attributes = True

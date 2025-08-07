@@ -2,7 +2,7 @@ from . import models
 from app import schemas
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import datetime, date , timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional
 
 def get_transactions(
@@ -225,4 +225,38 @@ def get_summary_by_month(
 
     summary = query.group_by("month").order_by("month").all()
     return {item.month: item.total_amount for item in summary}
+
+def record_net_worth_snapshot(db: Session):
+    """
+    Calculates the current total net worth and saves it as a snapshot for today.
+    If a snapshot for today already exists, it updates it.
+    """
+    balances = get_account_balances(db=db)
+    total_net_worth = sum(balances.values())
+    today = datetime.now(timezone.utc).date()   # Use timezone-aware date
+
+    # Check if an entry for today already exists
+    existing_snapshot = db.query(models.NetWorthHistory).filter(func.date(models.NetWorthHistory.date) == today).first()
+
+    if existing_snapshot:
+        # Update today's existing snapshot
+        existing_snapshot.value = total_net_worth
+    else:
+        # Create a new snapshot for today
+        new_snapshot = models.NetWorthHistory(date=datetime.now(timezone.utc), value=total_net_worth)
+        db.add(new_snapshot)
+
+    db.commit()
+
+def get_net_worth_history(db: Session, start_date: Optional[date] = None, end_date: Optional[date] = None):
+    """
+    Retrieves the historical net worth data, ordered by date.
+    """
+    query = db.query(models.NetWorthHistory)
+    if start_date:
+        query = query.filter(models.NetWorthHistory.date >= start_date)
+    if end_date:
+        query = query.filter(models.NetWorthHistory.date < end_date + timedelta(days=1))
+
+    return query.order_by(models.NetWorthHistory.date).all()
 

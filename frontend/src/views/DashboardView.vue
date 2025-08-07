@@ -1,24 +1,52 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { formatCurrency } from '@/utils/formatters';
+import NetWorthChart from '@/components/NetWorthChart.vue';
 
-const balances = ref(null)
-const isLoading = ref(true)
+const balances = ref(null);
+const netWorthHistory = ref([]);
+const isLoading = ref(true);
 
-const fetchBalances = async () => {
+const fetchDashboardData = async () => {
+    isLoading.value = true;
     try {
-        isLoading.value = true
-        const response = await fetch('/accounts/balances')
-        if (!response.ok) throw new Error('Failed to fetch balances')
-        balances.value = await response.json()
-    } catch (error) {
-        console.error(error)
-    } finally {
-        isLoading.value = false
-    }
-}
+        const [balanceRes, historyRes] = await Promise.all([
+            fetch('/accounts/balances'),
+            fetch('/net-worth/history')
+        ]);
+        if (!balanceRes.ok || !historyRes.ok) throw new Error('Failed to fetch dashboard data');
 
-onMounted(fetchBalances)
+        balances.value = await balanceRes.json();
+        netWorthHistory.value = await historyRes.json();
+    } catch (error) {
+        console.error(error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+onMounted(fetchDashboardData)
+
+const currentNetWorth = computed(() => {
+    if (!balances.value) return 0;
+    return Object.values(balances.value).reduce((sum, value) => sum + value, 0);
+});
+
+const netWorthChartData = computed(() => {
+    const labels = netWorthHistory.value.map(item => new Date(item.date).toLocaleDateString());
+    const data = netWorthHistory.value.map(item => item.value);
+    return {
+        labels,
+        datasets: [{
+            label: 'Net Worth',
+            backgroundColor: 'rgba(0, 123, 255, 0.2)',
+            borderColor: 'rgba(0, 123, 255, 1)',
+            data,
+            fill: true,
+            tension: 0.1
+        }]
+    };
+});
 </script>
 
 <template>
@@ -27,43 +55,60 @@ onMounted(fetchBalances)
 
         <div v-if="isLoading" class="loading">Loading balances...</div>
 
-        <div v-else-if="balances && Object.keys(balances).length > 0" class="balances-grid">
-            <div v-for="(balance, account) in balances" :key="account" class="balance-card">
-                <h2>{{ account }}</h2>
-                <p :class="balance >= 0 ? 'positive' : 'negative'">
-                    {{ formatCurrency(balance) }}
+        <div v-else>
+            <!-- Net Worth Summary -->
+            <div class="net-worth-summary">
+                <h2>Total Net Worth</h2>
+                <p :class="currentNetWorth >= 0 ? 'positive' : 'negative'">
+                    {{ formatCurrency(currentNetWorth) }}
                 </p>
             </div>
-        </div>
+            
+            <div v-if="balances && Object.keys(balances).length > 0" class="balances-grid">
+                <div v-for="(balance, account) in balances" :key="account" class="balance-card">
+                    <h3>{{ account }}</h3>
+                    <p :class="balance >= 0 ? 'positive' : 'negative'">
+                        {{ formatCurrency(balance) }}
+                    </p>
+                </div>
+            </div>
 
-        <div v-else class="info-box">
-            <h2>Welcome to Your Financial Tracker!</h2>
-            <p>
-                You have no account balances yet. To get started, you need to record your current balances.
-            </p>
-            <ol>
-                <li>Go to the <strong>Home</strong> page.</li>
-                <li>Select the transaction type <strong>Income</strong>.</li>
-                <li>Choose the category <strong>"Initial Balance"</strong>.</li>
-                <li>Enter your current balance for an account (e.g., Bank Account).</li>
-                <li>Submit the transaction.</li>
-            </ol>
-            <p>Repeat this for each of your accounts (Cash, E-wallet, etc.). Your balances will then appear here!</p>
+            <!-- Net Worth History Chart -->
+            <div class="history-chart-card">
+                <h3>Net Worth History</h3>
+                <NetWorthChart v-if="netWorthHistory.length > 1" :chart-data="netWorthChartData" />
+                <p v-else>Add more transactions and restart the app on different days to see your history grow.</p>
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped>
 .dashboard {
-    max-width: 960px;
+    max-width: 1200px;
     margin: 2rem auto;
     padding: 0 1rem;
+}
+.net-worth-summary {
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+.net-worth-summary h2 {
+    margin-top: 0;
+}
+.net-worth-summary p {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0;
 }
 .balance-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 1.5rem;
-    margin-top: 2rem;
 }
 .balance-card {
     background-color: #f9f9f9;
@@ -72,25 +117,26 @@ onMounted(fetchBalances)
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     text-align: center;
 }
-.balance-card h2 {
+.balance-card h3 {
     margin-top: 0;
     color: #333;
 }
 .balance-card p {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: bold;
     margin-bottom: 0;
 }
 .positive { color: #28a745; }
-.negative { color: #e74c3c; }
-.info-box {
-    margin-top: 2rem;
-    padding: 2rem;
-    background-color: #eef7ff;
-    border: 1px solid #bde0fe;
-    border-radius: 8px;
+.negative { color: #dc3545; }
+.net-worth-summary .positive, .net-worth-summary .negative {
+    color: white;
 }
-.info-box li {
-    margin-bottom: 0.5rem;
+.history-chart-card {
+    margin-top: 2rem;
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    height: 400px;
+    border: 1px solid #e0e0e0;
 }
 </style>
