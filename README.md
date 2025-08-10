@@ -1,19 +1,25 @@
 # Personal Financial Tracker
 
-A full-stack, self-hosted web application designed for simple and private personal finance tracking. This application allows you to manage transactions across multiple accounts, categorize your spending and income, and visualize your financial habits through interactive reports, all while keeping your data securely on your local machine.
+A full-stack, self-hosted web application designed for simple and private personal finance tracking. This application allows you to manage transactions across multiple accounts, track account balances, monitor your net worth, automate recurring entries, and budget your spending, all while keeping your data securely on your local machine.
 
 ## ✨ Features
 
-*   **Secure & Private:** All financial data is stored in a local SQLite database file. No data is ever sent over the Internet.
-*   **Multiple Accounts:** Track finances across different sources such as Bank Accounts, Cash, and E-wallets.
+*   **Secure & Private:** All financial data is stored in a local SQLite database file. No data is ever sent over the internet.
 *   **Transaction Management:** Full CRUD (Create, Read, Update, Delete) functionality for all your transactions (Expenses, Income, and Transfers).
-*   **Dynamic Categories:** Create, edit, and delete your own custom categories for both income and expenses.
-*   **Interactive Dashboard:** Get an at-a-glance view of your current account balances.
+*   **Dynamic Management:** Create, edit, and delete your own custom **Accounts** and **Categories** directly from the UI.
+*   **Interactive Dashboard:**
+    *   Get an at-a-glance view of all your current **Account Balances**.
+    *   Track your overall **Net Worth** with a historical line chart that updates daily.
+    *   Monitor your monthly spending with a dynamic **Budgeting** overview.
+*   **Intelligent Recurring Transactions:**
+    *   Define recurring income (e.g., Salary) and expenses (e.g., Rent, Subscriptions).
+    *   The system automatically checks on startup and creates any due transactions for the month.
+    *   It's smart enough to **not** create a duplicate if you've already manually entered a transaction in the same category for that month.
 *   **Advanced Reporting:**
     *   Filter transactions by date range and type.
     *   Visualize spending/income breakdown with a dynamic Pie Chart.
     *   Analyze trends over time with a monthly summary Bar Chart.
-*   **Pagination:** Smoothly navigate through long lists of transactions.
+*   **Pagination:** Smoothly navigate through long lists of transactions on the Home and Reports pages.
 *   **Single-Click Launch:** Includes a Windows Batch script to start the server and open the application with one click.
 
 ## 📸 Screenshots
@@ -29,7 +35,7 @@ This project was built using a modern, free, and open-source technology stack:
 *   **Backend:**
     *   **Framework:** [FastAPI](https://fastapi.tiangolo.com/) (Python)
     *   **Database:** [SQLite](https://www.sqlite.org/index.html)
-    *   **ORM:** [SQLAlchemy](https://www.sqlalchemy.org/)
+    *   **ORM & Migrations:** [SQLAlchemy](https://www.sqlalchemy.org/) & [Alembic](https://alembic.sqlalchemy.org/)
     *   **Data Validation:** [Pydantic](https://pydantic-docs.helpmanual.io/)
 *   **Frontend:**
     *   **Framework:** [Vue.js](https://vuejs.org/) (v3)
@@ -57,41 +63,23 @@ You will need the following software installed on your machine:
     ```
 
 2.  **Set up the Backend (Python):**
-    *   Navigate to the `backend` directory.
-      ```bash
-      cd backend
-      ```
-    *   Create a Python virtual environment.
-      ```bash
-      python -m venv .venv
-      ```
-    *   Activate the virtual environment.
-    *   On Windows:
-      ```bash
-      .\.venv\Scripts\activate
-      ```
-    *   On macOS/Linux:
-      ```bash
-      source .venv/bin/activate
-      ```
-    *   Install the required Python packages.
-      ```bash
-      uv pip install -r pyproject.toml
-      ```
-    *   Navigate back to the root directory.
-      ```bash
-      cd ..
-      ```
+    *   Navigate to the `backend` directory: `cd backend`
+    *   Create and activate a Python virtual environment:
+        *   `python -m venv .venv`
+        *   Windows: `.\.venv\Scripts\activate`
+        *   macOS/Linux: `source .venv/bin/activate`
+    *   Install the required Python packages: `uv pip install -r pyproject.toml`
 
-3.  **Set up the Frontend (Node.js):**
-    *   Navigate to the `frontend` directory.
-      ```bash
-      cd frontend
-      ```
-    *   Install the required npm packages.
-      ```bash
-      npm install
-      ```
+3.  **Set up the Database:**
+    *   With your virtual environment activated in the `backend` directory, use Alembic to build the database schema from the migration history:
+        ```bash
+        alembic upgrade head
+        ```
+    *   This will create a `financial_tracker.db` file in the project root with all the necessary tables.
+
+4.  **Set up the Frontend (Node.js):**
+    *   Navigate to the `frontend` directory: `cd ../frontend`
+    *   Install the required npm packages: `npm install`
 
 ## 🏃‍♂️ Running the Application
 
