@@ -347,3 +347,65 @@ def process_recurring_transactions(db: Session):
                 db.add(db_transaction)
                 db.commit()
 
+
+# --- BUDGETS ---
+def get_budgets(db: Session):
+    return db.query(models.Budget).order_by(models.Budget.category_name).all()
+
+def create_or_update_budget(db: Session, budget: schemas.BudgetCreate):
+    """
+    Creates a new budget or updates an existing one for the same category.
+    """
+    db_budget = db.query(models.Budget).filter(models.Budget.category_name == budget.category_name).first()
+
+    if db_budget:
+        # Update existing budget
+        db_budget.amount = budget.amount
+    else:
+        # Create new budget
+        db_budget = models.Budget(**budget.model_dump())
+        db.add(db_budget)
+
+    db.commit()
+    db.refresh(db_budget)
+    return db_budget
+
+def delete_budget(db: Session, budget_id: int):
+    db_budget = db.query(models.Budget).filter(models.Budget.id == budget_id).first()
+    if db_budget:
+        db.delete(db_budget)
+        db.commit()
+    return db_budget
+
+def get_budgets_status(db: Session):
+    """
+    For each budget, calculates the total spent in the current month
+    and returns the status.
+    """
+    today = datetime.now(timezone.utc).date()
+    start_of_month = today.replace(day=1)
+
+    all_budgets = db.query(models.Budget).all()
+    budget_statuses = []
+
+    for budget in all_budgets:
+        # Calculate total spending for this budget's category in current month
+        total_spent_query = db.query(func.sum(models.Transaction.amount)).filter(
+            models.Transaction.type == 'Expense',
+            models.Transaction.category == budget.category_name,
+            func.date(models.Transaction.date) >= start_of_month,
+            func.date(models.Transaction.date) <= today
+        )
+        total_spent = total_spent_query.scalar() or 0.0
+
+        remaining = budget.amount - total_spent
+
+        status = schemas.BudgetStatus(
+            category_name=budget.category_name,
+            budgeted_amount=budget.amount,
+            spent_amount=total_spent,
+            remaining_amount=remaining
+        )
+        budget_statuses.append(status)
+
+    return budget_statuses

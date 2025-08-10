@@ -61,7 +61,10 @@ const fetchData = async () => {
 const categoryChartData = computed(() => ({
     labels: Object.keys(categorySummary.value),
     datasets: [{
-        backgroundColor: ['#41B883', '#E46651', '#00D8FF', '#DD1B16', '#F4D03F', '#5D6D7E'],
+        backgroundColor: [
+        '#41B883', '#E46651', '#00D8FF', '#DD1B16', '#F4D03F', '#5D6D7E',
+        '#F39C12', '#8E44AD', '#3498DB', '#1ABC9C', '#2ECC71', '#E74C3C'
+        ],
         data: Object.values(categorySummary.value)
     }]
 }));

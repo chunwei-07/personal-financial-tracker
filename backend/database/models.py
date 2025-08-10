@@ -54,3 +54,10 @@ class RecurringTransaction(Base):
 
     # Track when this rule was last processed to prevent duplicates
     last_processed_date = Column(DateTime(timezone=True), nullable=True)
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category_name = Column(String, unique=True, nullable=False)
+    amount = Column(Float, nullable=False)

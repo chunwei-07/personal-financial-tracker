@@ -263,6 +263,38 @@ def delete_recurring_transaction_by_id(rec_transaction_id: int, db: Session = De
     return {"message": "Recurring transaction rule deleted successfully"}
 
 
+# --- BUDGETS ---
+@app.get("/budgets/", response_model=List[schemas.Budget])
+def read_budgets(db: Session = Depends(get_db)):
+    """
+    API endpoint to retrieve all budget rules.
+    """
+    return crud.get_budgets(db=db)
+
+@app.post("/budgets/", response_model=schemas.Budget)
+def create_or_update_a_budget(budget: schemas.BudgetCreate, db: Session = Depends(get_db)):
+    """
+    API endpoint to create a new budget or update an existing one for the same category.
+    """
+    return crud.create_or_update_budget(db=db, budget=budget)
+
+@app.delete("/budgets/{budget_id}")
+def delete_budget_by_id(budget_id: int, db: Session = Depends(get_db)):
+    """
+    API endpoint to delete a budget rule.
+    """
+    deleted_budget = crud.delete_budget(db=db, budget_id=budget_id)
+    if deleted_budget is None:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return {"message": "Budget deleted successfully"}
+
+@app.get("/budgets/status", response_model=List[schemas.BudgetStatus])
+def read_budgets_status(db: Session = Depends(get_db)):
+    """
+    API endpoint to receive the calculated status of all current budgets.
+    """
+    return crud.get_budgets_status(db=db)
+
 # Define the path to the frontend build directory
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'dist')
 

@@ -78,3 +78,23 @@ class RecurringTransaction(RecurringTransactionBase):
 
     class Config:
         from_attributes = True
+
+class BudgetBase(BaseModel):
+    category_name: str
+    amount: float
+
+class BudgetCreate(BudgetBase):
+    pass
+
+class Budget(BudgetBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+# This defines the shape of the data for dashboard view
+class BudgetStatus(BaseModel):
+    category_name: str
+    budgeted_amount: float
+    spent_amount: float
+    remaining_amount: float
