@@ -1,8 +1,10 @@
 # Personal Financial Tracker
 
-A full-stack, self-hosted web application designed for simple and private personal finance tracking. This application allows you to manage transactions across multiple accounts, track account balances, monitor your net worth, automate recurring entries, and budget your spending, all while keeping your data securely on your local machine.
+A full-stack, self-hosted web application designed for simple and private personal finance tracking. This application allows you to manage transactions across multiple accounts, track account balances, monitor your net worth, automate recurring entries, budget your spending, and export your data, all while keeping your data securely on your local machine.
 
 ## ✨ Features
+
+This app includes a full suite of features for comprehensive financial management:
 
 *   **Secure & Private:** All financial data is stored in a local SQLite database file. No data is ever sent over the internet.
 *   **Transaction Management:** Full CRUD (Create, Read, Update, Delete) functionality for all your transactions (Expenses, Income, and Transfers).
@@ -15,10 +17,11 @@ A full-stack, self-hosted web application designed for simple and private person
     *   Define recurring income (e.g., Salary) and expenses (e.g., Rent, Subscriptions).
     *   The system automatically checks on startup and creates any due transactions for the month.
     *   It's smart enough to **not** create a duplicate if you've already manually entered a transaction in the same category for that month.
-*   **Advanced Reporting:**
+*   **Advanced Reporting & Data Portability:**
     *   Filter transactions by date range and type.
     *   Visualize spending/income breakdown with a dynamic Pie Chart.
     *   Analyze trends over time with a monthly summary Bar Chart.
+    *   Download your filtered transaction data to a `.csv` file for use in spreadsheets such as Excel or Google Sheets.
 *   **Pagination:** Smoothly navigate through long lists of transactions on the Home and Reports pages.
 *   **Single-Click Launch:** Includes a Windows Batch script to start the server and open the application with one click.
 

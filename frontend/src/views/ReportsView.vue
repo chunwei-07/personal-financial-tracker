@@ -4,6 +4,7 @@ import TransactionList from '@/components/TransactionList.vue';
 import ExpenseChart from '@/components/ExpenseChart.vue';
 import TrendChart from '@/components/TrendChart.vue';
 import PaginationControls from '@/components/PaginationControls.vue';
+import convertToCSV, { downloadCSV } from '@/utils/export.js';
 
 // --- STATE ---
 const filters = reactive({
@@ -83,6 +84,45 @@ const handlePageChange = (newPage) => {
     currentPage.value = newPage;
 };
 
+const handleExport = async () => {
+    // Show a loading indicator or change the button text
+    const exportButton = document.querySelector('.export-btn');
+    if (exportButton) exportButton.textContent = 'Exporting...';
+
+    // Construct the same filter parameters, but without pagination
+    const params = new URLSearchParams({
+        start_date: filters.startDate,
+        end_date: filters.endDate,
+        type: filters.type,
+        skip: 0,
+        limit: 1000
+    }).toString();
+
+    try {
+        const response = await fetch(`/transactions/?${params}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch full transaction list for export.');
+        }
+        
+        const data = await response.json();
+
+        if (data.transactions.length === 0) {
+            alert("There are no transactions in the selected date range to export.");
+            return;
+        }
+        
+        // Use existing function with complete data
+        const csvContent = convertToCSV(data.transactions);
+        downloadCSV(csvContent, `transactions-${filters.startDate}-to-${filters.endDate}.csv`);
+    } catch (error) {
+        console.error("Export failed:", error);
+        alert("An error occurred during the export.");
+    } finally {
+        // Reset the button text
+        if (exportButton) exportButton.textContent = 'Export to CSV';
+    }
+};
+
 // --- WATCHER ---
 // This watches the 'filters' object and calls fetchData whenever a filter is changed.
 watch (filters, () => {
@@ -119,6 +159,16 @@ watch(currentPage, fetchData);
                 <div class="form-group">
                     <label for="endDate">End Date</label>
                     <input type="date" id="endDate" v-model="filters.endDate" />
+                </div>
+                <div class="form-group export-group">
+                    <label>&nbsp;</label>
+                    <button
+                        @click="handleExport"
+                        :disabled="transactions.length === 0"
+                        class="export-btn"
+                    >
+                        Export to CSV
+                    </button>
                 </div>
             </div>
         </div>
@@ -185,6 +235,22 @@ watch(currentPage, fetchData);
     padding: 8px;
     border-radius: 4px;
     border: 1px solid #ccc;
+}
+.export-group {
+    justify-content: flex-end;
+}
+.export-btn {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    height: 38px;
+}
+.export-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
 }
 .loading-state {
     text-align: center;

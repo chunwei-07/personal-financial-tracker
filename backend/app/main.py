@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -94,7 +94,7 @@ def create_new_transaction(transaction: schemas.TransactionCreate, db: Session =
 @app.get("/transactions/", response_model=schemas.TransactionPage)
 def read_transactions(
     skip: int = 0,
-    limit: int = 10,
+    limit: int = Query(default=10, le=1000),
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     type: Optional[str] = None,
